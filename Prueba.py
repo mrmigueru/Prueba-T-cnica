@@ -101,10 +101,10 @@ class PruebaAPI:
 
 if __name__ == "__main__":
 
-    email = "miguelarcila2002@mail.com"  # Reemplaza con tu email
-    phone = "+584244948137"          # Reemplaza con tu teléfono
-    tester_name = "miguel vargas"       # Reemplaza con tu nombre
-    project_url = "https://github.com/mrmigueru/Prueba-T-cnica"  # Reemplaza con tu URL de GitHub
+    email = "miguelarcila2002@mail.com"  # email
+    phone = "+584244948137"          # teléfono
+    tester_name = "miguel vargas"       # nombre
+    project_url = "https://github.com/mrmigueru/Prueba-T-cnica"  # GitHub
     
 
     fonet_demo = PruebaAPI(email)
