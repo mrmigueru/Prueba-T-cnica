@@ -101,7 +101,7 @@ class PruebaAPI:
 
 if __name__ == "__main__":
 
-    email = "miguelarcila2002@mail.com"  # email
+    email = "miguelarcila2002@gmail.com"  # email
     phone = "+584244948137"          # teléfono
     tester_name = "miguel vargas"       # nombre
     project_url = "https://github.com/mrmigueru/Prueba-T-cnica"  # GitHub
