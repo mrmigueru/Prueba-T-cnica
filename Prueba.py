@@ -3,7 +3,7 @@ import base64
 import json
 from datetime import datetime
 
-class FonetDemoAPI:
+class PruebaAPI:
     def __init__(self, email):
         self.email = email
         self.key = None
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     project_url = "https://github.com/mrmigueru/Prueba-T-cnica"  # Reemplaza con tu URL de GitHub
     
 
-    fonet_demo = FonetDemoAPI(email)
+    fonet_demo = PruebaAPI(email)
     
 
     if fonet_demo.register_email():
