@@ -1,169 +1,119 @@
 import requests
 import base64
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 
-def register_email(email):
-
-    url = "https://ondemand.fonet.com.ve/cpanel/API_v1/demo/register"
-    headers = {"accept": "application/json"}
-    data = {"email": email}
-    
-
-    response = requests.post(url, headers=headers, data=data)
-    response.raise_for_status()
-    return {
-            "success": True,
-            "data": response.json()
-    }
-
-
-def generate_auth_token(key, secret):
-
-  
-    auth_string = f"{key}:{secret}"
-    
-
-    auth_bytes = auth_string.encode('utf-8')
-    
-
-    auth_token = base64.b64encode(auth_bytes).decode('utf-8')
-    
-    return auth_token
-
-
-def get_temporal_token(auth_token):
-
-    url = "https://ondemand.fonet.com.ve/cpanel/API_v1/demo/get_token"
-    headers = {
-        "accept": "application/json",
-        "Authorization": f"Bearer {auth_token}"
-    }
-    
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        return {
-            "success": True,
-            "data": response.json()
-        }
-    except requests.exceptions.RequestException as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
-    except json.JSONDecodeError:
-        return {
-            "success": False,
-            "error": "La respuesta no tiene formato JSON válido"
-        }
-    
-def send_personal_info(temp_token, phone, name, repo_url):
-    url = "https://ondemand.fonet.com.ve/cpanel/API_v1/demo/challenge_me"
-    headers = {
-        "accept": "application/json",
-        "Authorization": f"Bearer {temp_token}"
-    }
-    data = {
-        "phone": phone,
-        "tester_name": name,
-        "project_url": repo_url
-    }
-    
-    try:
-        response = requests.post(url, headers=headers, json=data)
-        response.raise_for_status()
-        return {"success": True, "data": response.json()}
-    except requests.exceptions.RequestException as e:
-        return {"success": False, "error": str(e)}
-    except json.JSONDecodeError:
-        return {"success": False, "error": "La respuesta no tiene formato JSON válido"}
-
-
-def format_expiration(seconds):
-
-    expiration_time = datetime.now() + timedelta(seconds=seconds)
-    return expiration_time.strftime("%Y-%m-%d %H:%M:%S")
-
-
-def main():
-    
-    # Registro
-    user_email = input("Por favor, ingrese su correo electrónico: ")
-    registration_result = register_email(user_email)
-    
-    if not registration_result["success"]:
-        print("\n Error en el registro:")
-        print(registration_result["error"])
-        return
-    
-    print("\n Registro exitoso!")
-    response_data = registration_result["data"]
-    print("Datos de registro recibidos:")
-    print(json.dumps(response_data, indent=2))
-    
-    key = response_data.get("key")
-    secret = response_data.get("secret")
-    
-    if not key or not secret:
-        print("\n Error: La respuesta no contiene key o secret")
-        return
-    
-    # token de autenticación
-
-    auth_token = generate_auth_token(key, secret)
-    print(" Token de autenticación generado:")
-    print(auth_token)
-    
-    # token temporal
-    temporal_token_result = get_temporal_token(auth_token)
-    
-    if not temporal_token_result["success"]:
-        print(" Error al obtener token temporal:")
-        print(temporal_token_result["error"])
-        return
-    
-    temporal_data = temporal_token_result["data"]
-    print("\n Token temporal obtenido exitosamente!")
-    print(" Detalles del token temporal:")
-    print(f"  - Token: {temporal_data['temporal_auth_token']}")
-    print(f"  - Usuario: {temporal_data['username']}")
-    print(f"  - Expira en (segundos): {temporal_data['expiration']}")
-    print(f"  - Fecha estimada de expiración: {format_expiration(temporal_data['expiration'])}")
-    
-    # información personal
-    print("Por favor complete la siguiente información:")
-    
-    phone = input(" Teléfono de contacto: ")
-    name = input(" Nombre completo: ")
-    repo_url = input("🔗 URL del repositorio GitHub: ")
-    
-    print("\n⏳ Enviando información...")
-    personal_info_result = send_personal_info(
-        temporal_data['temporal_auth_token'],
-        phone,
-        name,
-        repo_url
-    )
-    
-    if not personal_info_result["success"]:
-        print(" Error al enviar información personal:")
-        print(personal_info_result["error"])
+class FonetDemoAPI:
+    def __init__(self, email):
+        self.email = email
+        self.key = None
+        self.secret = None
+        self.auth_token = None
+        self.temporal_auth_token = None
+        self.username = None
         
-        # Verificar si el error fue por token expirado
-        if "401" in personal_info_result["error"]:
-            print("\n El token temporal podría haber expirado.")
-            print("Por favor ejecute el programa nuevamente para generar un nuevo token.")
-        return
+    def register_email(self):
+        url = "https://ondemand.fonet.com.ve/cpanel/API_v1/demo/register"
+        headers = {
+            "accept": "application/json"
+        }
+        data = {
+            "email": self.email
+        }
+        
+        response = requests.post(url, headers=headers, json=data)
+        
+        if response.status_code == 200:
+            result = response.json()
+            self.key = result.get('key')
+            self.secret = result.get('secret')
+            print("Registro exitoso:")
+            print(f"Key: {self.key}")
+            print(f"Secret: {self.secret}")
+            return True
+        else:
+            print(f"Error en el registro: {response.status_code} - {response.text}")
+            return False
     
-    final_data = personal_info_result["data"]
-    print(" Resultados finales:")
-    print(f"  - Usuario: {final_data['username']}")
-    print(f"  - Fecha de registro: {final_data['register_date']}")
-    print(f"  - Fecha de completación: {final_data['completion_date']}")
-    print("  - Estadísticas:")
-    print(f"     * Tiempo generación token temporal: {final_data['statistics']['generate_temp_token_time']}")
-    print(f"     * Tiempo total de completación: {final_data['statistics']['total_completion_time']}")
+    def generate_auth_token(self):
+        if not self.key or not self.secret:
+            print("No se tiene key o secret. Primero debe registrar el email.")
+            return False
+            
+        auth_string = f"{self.key}:{self.secret}"
+        self.auth_token = base64.b64encode(auth_string.encode('utf-8')).decode('utf-8')
+        print(f"Token de autenticación generado: {self.auth_token}")
+        return True
+    
+    def get_temporal_token(self):
+        if not self.auth_token:
+            print("No se tiene auth token. Primero debe generarlo.")
+            return False
+            
+        url = "https://ondemand.fonet.com.ve/cpanel/API_v1/demo/get_token"
+        headers = {
+            "accept": "application/json",
+            "Authorization": f"Bearer {self.auth_token}"
+        }
+        
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            result = response.json()
+            self.temporal_auth_token = result.get('temporal_auth_token')
+            self.username = result.get('username')
+            print("Token temporal obtenido:")
+            print(f"Token: {self.temporal_auth_token}")
+            print(f"Expira en: {result.get('expiration')} segundos")
+            return True
+        else:
+            print(f"Error al obtener token temporal: {response.status_code} - {response.text}")
+            return False
+    
+    def send_challenge_data(self, phone, tester_name, project_url):
+
+        if not self.temporal_auth_token:
+            print("No se tiene token temporal. Primero debe obtenerlo.")
+            return False
+            
+        url = "https://ondemand.fonet.com.ve/cpanel/API_v1/demo/challenge_me"
+        headers = {
+            "accept": "application/json",
+            "Authorization": f"Bearer {self.temporal_auth_token}"
+        }
+        data = {
+            "phone": phone,
+            "tester_name": tester_name,
+            "project_url": project_url
+        }
+        
+        response = requests.post(url, headers=headers, json=data)
+        
+        if response.status_code == 200:
+            result = response.json()
+            print("Datos enviados exitosamente:")
+            print(json.dumps(result, indent=2))
+            return True
+        else:
+            print(f"Error al enviar datos: {response.status_code} - {response.text}")
+            return False
+
 
 if __name__ == "__main__":
-    main()
+
+    email = "miguelarcila2002@mail.com"  # Reemplaza con tu email
+    phone = "+584244948137"          # Reemplaza con tu teléfono
+    tester_name = "miguel vargas"       # Reemplaza con tu nombre
+    project_url = "https://github.com/mrmigueru/Prueba-T-cnica"  # Reemplaza con tu URL de GitHub
+    
+
+    fonet_demo = FonetDemoAPI(email)
+    
+
+    if fonet_demo.register_email():
+
+        if fonet_demo.generate_auth_token():
+
+            if fonet_demo.get_temporal_token():
+
+                fonet_demo.send_challenge_data(phone, tester_name, project_url)
